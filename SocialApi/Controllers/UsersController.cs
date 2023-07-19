@@ -1,33 +1,58 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using AutoMapper;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SocialApi.Data;
+using SocialApi.DTOs;
+using SocialApi.Interfaces;
 using SocialApi.Models;
+using System.Security.Claims;
 
 namespace SocialApi.Controllers
 {
     [Authorize]
     public class UsersController : BaseController
     {
-        private readonly DataContext _dataContext;
+        private readonly IUserRepository _userRpeo;
+        private readonly IMapper _mapper;
 
-        public UsersController(DataContext dataContext)
+        public UsersController(IUserRepository userRpeo, IMapper mapper)
         {
-            _dataContext = dataContext;
+            _userRpeo = userRpeo;
+            _mapper = mapper;
         }
 
-        [AllowAnonymous]
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<AppUser>>> Get()
-        {
-            return Ok(await _dataContext.Users.ToListAsync());
+        public async Task<ActionResult<IEnumerable<MemberDto>>> Get()
+        { 
+            return Ok(await _userRpeo.GetAllMembersAsync());
         }
 
-        [HttpGet("{id}")]
-        public async Task<ActionResult<AppUser>> Get(int id)
+        [HttpGet("{username}")]
+        public async Task<ActionResult<MemberDto>> GetByUsername(string username)
+        { 
+            return Ok(await _userRpeo.GetMemberByUserNameAsync(username));
+        }
+
+        [HttpPut]
+        public async Task<ActionResult> UpdateUser(MemberUpdateDto memberData)
         {
-            return Ok(await _dataContext.Users.FindAsync(id));
+            var username = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var user =await _userRpeo.GetUserByUserNameAsync(username);
+
+            if(user == null)
+            {
+                return NotFound();
+            }
+
+            _mapper.Map(memberData, user);
+
+            if (await _userRpeo.SaveAllChanges()) return NoContent();
+
+            return BadRequest("Failed To Update User");
+
+
         }
     }
 }

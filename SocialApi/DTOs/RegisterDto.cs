@@ -7,7 +7,7 @@ namespace SocialApi.DTOs
         [Required]
         public string Username { get; set; }
         [Required]
-        [StringLength(20, MinimumLength = 8)]
+        [StringLength(8, MinimumLength = 4)]
         public string Password { get; set; }
     }
 }
